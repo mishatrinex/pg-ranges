@@ -1,0 +1,24 @@
+{
+  "name": "mishatrinex/pg-ranges",
+  "description": "Postgres ranges parsing in native PHP",
+  "keywords": ["pgsql", "postgres", "postgresql", "ranges", "numrange", "int4range", "int8range"],
+  "type": "library",
+  "license": "BSD-2-Clause",
+  "support": {
+    "source": "https://github.com/mishatrinex/pg-ranges"
+  },
+  "authors": [
+    {
+      "name": "Misha Trinex",
+      "email": "misha@trinex.ru"
+    }
+  ],
+  "require": {
+    "php": ">=7.0.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "mishatrinex\\pgranges\\": "src/"
+    }
+  }
+}
