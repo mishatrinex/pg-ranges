@@ -15,16 +15,18 @@ abstract class Range
     /** @var int|float|mixed */
     private $upperBound;
 
-    /** @var bool  */
+    /** @var bool */
     private $isLowerBoundInclusive;
 
-    /** @var bool  */
+    /** @var bool */
     private $isUpperBoundInclusive;
 
 
     /**
      * This method uses for typing conversion when bound is setting
+     *
      * @param $bound
+     *
      * @return mixed
      */
     abstract public function convertBound($bound);
@@ -40,8 +42,8 @@ abstract class Range
      * @throws     \OverflowException
      */
     public function __construct(
-        $lowerBound,
-        $upperBound,
+        $lowerBound = null,
+        $upperBound = null,
         bool $isLowerBoundInclusive = true,
         bool $isUpperBoundInclusive = true
     ) {
@@ -73,15 +75,22 @@ abstract class Range
     /**
      * Paring Postgres range format: ``[0.5,1.0)``, where "[" is inclusive bound and ")" is exclusive bound
      * No bound marks as empty string and always has exclusive bound: ``(,1.0]``
+     *
      * @see https://www.postgresql.org/docs/current/static/rangetypes.html
+     *
      * @param string $value
+     * @param boolean $returnNull
      *
      * @return static
      * @throws \UnexpectedValueException
      * @throws \OverflowException
      */
-    public static function fromString(string $value)
+    public static function fromString(string $value = null, $returnNull = false)
     {
+        if ($value === null) {
+            return $returnNull ? null : new static();
+        }
+
         $arrayed = str_split($value);
 
         $lowerIncExl = null;
@@ -89,20 +98,20 @@ abstract class Range
         $lowerBound  = null;
         $upperBound  = null;
 
-        $isBottom = false;
-        $isUpper  = false;
+        $isLower = false;
+        $isUpper = false;
 
         foreach ($arrayed as $pos => $char) {
             if ($char === '(' || $char === '[') {
                 $lowerIncExl = $char;
-                $isBottom    = true;
+                $isLower     = true;
                 continue;
             }
 
-            if ($isBottom === true) {
+            if ($isLower === true) {
                 if ($char === ',') {
-                    $isUpper  = true;
-                    $isBottom = false;
+                    $isUpper = true;
+                    $isLower = false;
                     continue;
                 }
 
@@ -126,10 +135,22 @@ abstract class Range
             throw new \UnexpectedValueException(sprintf('Expected range string format, got: %s', $value));
         }
 
-        $isBottomInclusive = $lowerIncExl === '[';
-        $isUpperInclusive  = $upperIncExl === ']';
+        $isLowerInclusive = $lowerIncExl === '[';
+        $isUpperInclusive = $upperIncExl === ']';
 
-        return new static($lowerBound, $upperBound, $isBottomInclusive, $isUpperInclusive);
+        return new static($lowerBound, $upperBound, $isLowerInclusive, $isUpperInclusive);
+    }
+
+    /**
+     * Array format: [lowerBound, upperBound, inclusiveLower, inclusiveUpper]
+     *
+     * @param array $inputArray
+     *
+     * @return Range
+     */
+    public static function fromArray(array $inputArray): self
+    {
+        return new static($inputArray[0], $inputArray[1], $inputArray[2], $inputArray[3]);
     }
 
     /**
@@ -150,39 +171,57 @@ abstract class Range
 
     /**
      * Convert object to string representation
-     * @return string
+     *
+     * @return string|null
      */
-    public function __toString(): string
+    public function __toString()
     {
-        return sprintf('%s%s,%s%s',
-            $this->isLowerBoundInclusive() ? '[' : '(',
-            $this->getLowerBound(),
-            $this->getUpperBound(),
-            $this->isUpperBoundInclusive() ? ']' : ')'
-        );
-    }
-
-    /**
-     * @param           $upperBound
-     * @param bool|null $inclusive
-     */
-    public function setUpperBound($upperBound, bool $inclusive = null)
-    {
-        $this->upperBound = $this->convertBound($upperBound);
-        if ($inclusive !== null) {
-            $this->isUpperBoundInclusive = $inclusive;
+        if ($this->getLowerBound() !== null || $this->getUpperBound() !== null) {
+            return sprintf('%s%s,%s%s',
+                $this->isLowerBoundInclusive() ? '[' : '(',
+                $this->getLowerBound(),
+                $this->getUpperBound(),
+                $this->isUpperBoundInclusive() ? ']' : ')'
+            );
         }
     }
 
     /**
-     * @param           $bottomBound
-     * @param bool|null $inclusive
+     * @return array|null
      */
-    public function setLowerBound($bottomBound, bool $inclusive = null)
+    public function __toArray()
     {
-        $this->lowerBound = $this->convertBound($bottomBound);
-        if ($inclusive !== null) {
-            $this->isLowerBoundInclusive = $inclusive;
+        if ($this->getLowerBound() !== null || $this->getUpperBound() !== null) {
+            return [
+                $this->getLowerBound(),
+                $this->getUpperBound(),
+                $this->isLowerBoundInclusive(),
+                $this->isUpperBoundInclusive(),
+            ];
+        }
+    }
+
+    /**
+     * @param           $upperBound
+     * @param bool|null $isInclusive
+     */
+    public function setUpperBound($upperBound, bool $isInclusive = null)
+    {
+        $this->upperBound = $this->convertBound($upperBound);
+        if ($isInclusive !== null) {
+            $this->isUpperBoundInclusive = $isInclusive;
+        }
+    }
+
+    /**
+     * @param           $lowerBound
+     * @param bool|null $isInclusive
+     */
+    public function setLowerBound($lowerBound, bool $isInclusive = null)
+    {
+        $this->lowerBound = $this->convertBound($lowerBound);
+        if ($isInclusive !== null) {
+            $this->isLowerBoundInclusive = $isInclusive;
         }
     }
 
@@ -191,14 +230,14 @@ abstract class Range
      */
     public function checkBounds()
     {
-        $upper  = $this->getUpperBound();
-        $bottom = $this->getLowerBound();
+        $lower = $this->getLowerBound();
+        $upper = $this->getUpperBound();
 
         if ($upper !== null
-            && $bottom !== null
-            && $bottom > $upper) {
+            && $lower !== null
+            && $lower > $upper) {
             throw new \OverflowException(
-                sprintf('Upper bound (%s) less then bottom bound (%s)',
+                sprintf('Upper bound (%s) less then lower bound (%s)',
                     $this->getUpperBound(),
                     $this->getLowerBound())
             );
