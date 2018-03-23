@@ -147,9 +147,13 @@ abstract class Range
      * @param array $inputArray
      *
      * @return Range
+     * @throws \OverflowException
      */
-    public static function fromArray(array $inputArray): self
+    public static function fromArray(array $inputArray = null): self
     {
+        if ($inputArray === null) {
+            new static();
+        }
         return new static($inputArray[0], $inputArray[1], $inputArray[2], $inputArray[3]);
     }
 
