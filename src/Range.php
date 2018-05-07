@@ -152,7 +152,7 @@ abstract class Range
     public static function fromArray(array $inputArray = null): self
     {
         if ($inputArray === null) {
-            new static(null, null, true, true);
+            return new static(null, null, true, true);
         }
 
         return new static($inputArray[0], $inputArray[1], $inputArray[2], $inputArray[3]);
