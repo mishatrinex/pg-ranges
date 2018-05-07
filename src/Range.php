@@ -23,7 +23,7 @@ abstract class Range
 
 
     /**
-     * This method uses for typing conversion when bound is setting
+     * This method is using for typing conversion when bound is setting
      *
      * @param $bound
      *
@@ -73,12 +73,12 @@ abstract class Range
     }
 
     /**
-     * Paring Postgres range format: ``[0.5,1.0)``, where "[" is inclusive bound and ")" is exclusive bound
+     * Parsing Postgres range format: ``[0.5,1.0)``, where "[" is inclusive bound and ")" is exclusive bound
      * No bound marks as empty string and always has exclusive bound: ``(,1.0]``
      *
      * @see https://www.postgresql.org/docs/current/static/rangetypes.html
      *
-     * @param string $value
+     * @param string  $value
      * @param boolean $returnNull
      *
      * @return static
@@ -87,11 +87,11 @@ abstract class Range
      */
     public static function fromString(string $value = null, $returnNull = false)
     {
-        if ($value === null) {
+        if ($value === null || \in_array($value, ['(,)', '[,]', '[,)', '(,]'], true)) {
             return $returnNull ? null : new static();
         }
 
-        $arrayed = str_split($value);
+        $arrayed = \str_split($value);
 
         $lowerIncExl = null;
         $upperIncExl = null;
@@ -154,6 +154,7 @@ abstract class Range
         if ($inputArray === null) {
             new static(null, null, true, true);
         }
+
         return new static($inputArray[0], $inputArray[1], $inputArray[2], $inputArray[3]);
     }
 
