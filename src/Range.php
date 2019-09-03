@@ -189,6 +189,7 @@ abstract class Range
                 $this->isUpperBoundInclusive() ? ']' : ')'
             );
         }
+        return '';
     }
 
     /**
